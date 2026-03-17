@@ -1,0 +1,18 @@
+{
+  "name": "POMO Study Timer",
+  "short_name": "POMO",
+  "description": "Track study time by subject",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#2d3436",
+  "theme_color": "#2d3436",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

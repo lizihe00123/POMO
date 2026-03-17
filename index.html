@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#2d3436">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="POMO Study">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <title>POMO - Study Timer</title>
+  <style>
+    :root {
+      --primary: #2d3436;
+      --primary-dark: #1e2224;
+      --success: #4ecdc4;
+      --warning: #ffe66d;
+      --purple: #a29bfe;
+      --blue: #74b9ff;
+      --pink: #fd79a8;
+      --orange: #fab1a0;
+      --green: #55efc4;
+      --text: #2d3436;
+      --text-light: #636e72;
+      --bg: #f8f9fa;
+      --card: #ffffff;
+      --shadow: rgba(0,0,0,0.1);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #2d3436 0%, #636e72 100%);
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+      padding: var(--safe-top) 12px var(--safe-bottom) 12px;
+    }
+
+    .app-container {
+      max-width: 480px;
+      margin: 0 auto;
+      background: var(--card);
+      border-radius: 24px;
+      min-height: calc(100vh - 24px);
+      min-height: -webkit-fill-available;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Main View - Subject Grid */
+    .main-view {
+      padding: 20px;
+      flex: 1;
+      padding-bottom: 80px;
+    }
+
+    .subjects-grid-main {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .subject-card {
+      aspect-ratio: 1;
+      border-radius: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .subject-card:active { transform: scale(0.95); }
+    .subject-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+
+    .subject-card-icon { font-size: 36px; margin-bottom: 8px; }
+    .subject-card-name { font-size: 18px; font-weight: 700; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+
+    .subject-card-add {
+      background: #f8f9fa;
+      border: 3px dashed #ddd;
+      color: #999;
+    }
+
+    .subject-card-add .subject-card-icon { font-size: 32px; }
+    .subject-card-add .subject-card-name { color: #999; font-weight: 500; text-shadow: none; }
+
+    /* Selected Subject Card as Timer */
+    .subject-card.timer-mode {
+      flex-direction: column;
+      justify-content: center;
+      aspect-ratio: auto;
+      min-height: 140px;
+    }
+
+    .timer-card-time {
+      font-size: 36px;
+      font-weight: 800;
+      color: white;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      margin-bottom: 10px;
+    }
+
+    .timer-card-time.running {
+      color: #fff;
+      text-shadow: 0 0 20px rgba(255,255,255,0.5);
+    }
+
+    .timer-card-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .timer-card-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: none;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .timer-card-btn.play { background: white; color: var(--primary); }
+    .timer-card-btn.pause { background: #ffd93d; color: #333; }
+    .timer-card-btn.stop { background: #ff6b6b; color: white; }
+
+    /* Stats Section */
+    .stats-section {
+      flex: 1;
+      padding: 20px;
+      background: #f8f9fa;
+    }
+
+    .stats-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .stats-header h2 { font-size: 16px; color: var(--text); }
+
+    .tab-switch {
+      display: flex;
+      background: #e1e2e6;
+      border-radius: 8px;
+      padding: 2px;
+    }
+
+    .tab-btn {
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      border: none;
+      background: transparent;
+      color: var(--text-light);
+      cursor: pointer;
+    }
+
+    .tab-btn.active { background: white; color: var(--text); font-weight: 600; }
+
+    .stat-card {
+      background: white;
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 8px var(--shadow);
+    }
+
+    /* Chart Styles */
+    .chart-container {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px var(--shadow);
+    }
+
+    .chart-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+
+    .bar-chart {
+      display: flex;
+      align-items: flex-end;
+      height: 120px;
+      gap: 8px;
+      padding-top: 10px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .bar-item {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .bar-chart.week .bar-item { width: 40px; }
+    .bar-chart.month .bar-item { width: 22px; }
+
+    .bar {
+      border-radius: 6px 6px 2px 2px;
+      min-height: 4px;
+      transition: height 0.3s ease;
+    }
+
+    .bar-chart.week .bar { width: 28px; }
+    .bar-chart.month .bar { width: 14px; }
+
+    .bar-label {
+      font-size: 10px;
+      color: var(--text-light);
+      font-weight: 500;
+    }
+
+    .bar-value {
+      font-size: 9px;
+      color: var(--text-light);
+    }
+
+    .chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid #f1f2f6;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    /* Subject Chart (horizontal bar) */
+    .subject-chart {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .subject-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .subject-bar-label {
+      font-size: 13px;
+      min-width: 70px;
+      color: var(--text);
+    }
+
+    .subject-bar-container {
+      flex: 1;
+      height: 24px;
+      background: #f1f2f6;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .subject-bar-fill {
+      height: 100%;
+      border-radius: 12px;
+      transition: width 0.3s ease;
+    }
+
+    .subject-bar-value {
+      font-size: 12px;
+      min-width: 50px;
+      text-align: right;
+      color: var(--text-light);
+    }
+
+    .stat-date { font-size: 12px; color: var(--text-light); margin-bottom: 12px; }
+
+    .subject-time-row {
+      display: flex;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #f1f2f6;
+    }
+
+    .subject-time-row:last-child { border-bottom: none; }
+
+    .subject-color {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+
+    .subject-name { flex: 1; font-size: 14px; color: var(--text); }
+    .subject-duration { font-size: 14px; font-weight: 600; color: var(--text); }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px;
+      background: linear-gradient(135deg, #2d3436 0%, #636e72 100%);
+      border-radius: 12px;
+      color: white;
+      margin-top: 12px;
+    }
+
+    .total-label { font-size: 14px; }
+    .total-duration { font-size: 18px; font-weight: 700; }
+
+    /* Quick Add */
+    .quick-add {
+      padding: 16px 20px;
+      background: white;
+      border-top: 1px solid #f1f2f6;
+    }
+
+    .quick-add input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #f1f2f6;
+      border-radius: 12px;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .quick-add input:focus { border-color: var(--primary); }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: flex-end;
+      z-index: 1000;
+    }
+
+    .modal.active { display: flex; }
+
+    .modal-content {
+      background: white;
+      border-radius: 24px 24px 0 0;
+      padding: 24px;
+      width: 100%;
+      max-width: 480px;
+      animation: slideUp 0.3s ease;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .modal h3 { font-size: 18px; margin-bottom: 20px; }
+
+    .modal input, .modal select {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #f1f2f6;
+      border-radius: 12px;
+      font-size: 15px;
+      margin-bottom: 12px;
+      outline: none;
+    }
+
+    .modal input:focus, .modal select:focus { border-color: var(--primary); }
+
+    .color-options {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .color-option {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 3px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .color-option.selected { border-color: var(--text); transform: scale(1.1); }
+
+    .modal-buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .modal-buttons button {
+      flex: 1;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-cancel { background: #f1f2f6; color: var(--text-light); }
+    .btn-save { background: var(--primary); color: white; }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-light);
+    }
+
+    .empty-state span { font-size: 48px; display: block; margin-bottom: 12px; }
+
+    /* Nav Bar */
+    .nav-bar {
+      display: flex;
+      justify-content: space-around;
+      padding: 12px;
+      background: white;
+      border-top: 1px solid #f1f2f6;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 20px;
+      border-radius: 12px;
+      cursor: pointer;
+      color: var(--text-light);
+      font-size: 11px;
+      transition: all 0.2s;
+    }
+
+    .nav-item.active { color: var(--primary); background: #fff5f5; }
+    .nav-item span { font-size: 20px; }
+
+    @media (max-width: 400px) {
+      .timer-display { font-size: 56px; }
+      .subject-chip { padding: 8px 12px; font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Main View - Subject Grid -->
+    <div id="mainView">
+      <div class="header" style="padding: 20px;">
+        <h1 style="font-size: 28px; font-weight: 800; letter-spacing: 2px;">📚 POMO</h1>
+        <p style="font-size: 14px; font-weight: 600; background: linear-gradient(90deg, #fff, #ffeaa7, #fff); padding: 8px 16px; border-radius: 20px; display: inline-block; margin-top: 4px;">✨ Tap a subject to start ✨</p>
+      </div>
+      <div class="main-view">
+        <div class="subjects-grid-main" id="subjectsGridMain"></div>
+      </div>
+    </div>
+
+
+
+
+
+    <!-- Stats View -->
+    <div id="statsView" style="display:none;">
+      <div class="stats-section">
+        <div class="stats-header">
+          <h2>📊 Study Stats</h2>
+          <div class="tab-switch">
+            <button class="tab-btn active" onclick="app.switchTab('week')">Week</button>
+            <button class="tab-btn" onclick="app.switchTab('month')">Month</button>
+          </div>
+        </div>
+        <div id="statsContent"></div>
+      </div>
+    </div>
+
+    <!-- Nav Bar -->
+    <div class="nav-bar">
+      <div class="nav-item active" onclick="app.switchView('main')">
+        <span>📚</span>
+        Subjects
+      </div>
+      <div class="nav-item" onclick="app.switchView('stats')">
+        <span>📊</span>
+        Stats
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Subject Modal -->
+  <div class="modal" id="addSubjectModal">
+    <div class="modal-content">
+      <h3>Add Subject</h3>
+      <input type="text" id="newSubjectName" placeholder="Subject name (e.g. Math)">
+      <div class="color-options" id="colorOptions"></div>
+      <div class="modal-buttons">
+        <button class="btn-cancel" onclick="app.closeModal()">Cancel</button>
+        <button class="btn-save" onclick="app.saveSubject()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const COLORS = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#a29bfe', '#74b9ff', '#fd79a8', '#fab1a0', '#55efc4'];
+    const STORAGE_KEY = 'pomo_data';
+
+    const app = {
+      subjects: [],
+      records: [],
+      currentSubject: null,
+      timerInterval: null,
+      seconds: 0,
+      isRunning: false,
+      selectedColor: COLORS[0],
+
+      init() {
+        this.loadData();
+        this.renderSubjects();
+        this.renderStats();
+        this.initColorOptions();
+        
+        // Pause timer when app goes to background (battery saving)
+        document.addEventListener('visibilitychange', () => {
+          if (document.hidden && this.isRunning) {
+            this.pauseTimer();
+          }
+        });
+      },
+
+      loadData() {
+        const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        this.subjects = data.subjects || [
+          { id: '1', name: 'Math', color: '#ff6b6b' },
+          { id: '2', name: 'English', color: '#4ecdc4' },
+          { id: '3', name: 'Chinese', color: '#a29bfe' },
+          { id: '4', name: 'Science', color: '#74b9ff' }
+        ];
+        this.records = data.records || [];
+      },
+
+      saveData() {
+        // Keep only last 30 days of records to prevent memory growth
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const cutoff = thirtyDaysAgo.toISOString().split('T')[0];
+        
+        const oldRecords = this.records.filter(r => r.date >= cutoff);
+        
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          subjects: this.subjects,
+          records: oldRecords
+        }));
+      },
+
+      initColorOptions() {
+        const container = document.getElementById('colorOptions');
+        container.innerHTML = COLORS.map(c => 
+          `<div class="color-option ${c === this.selectedColor ? 'selected' : ''}" 
+                style="background:${c}" onclick="app.selectColor('${c}')"></div>`
+        ).join('');
+      },
+
+      selectColor(color) {
+        this.selectedColor = color;
+        document.querySelectorAll('.color-option').forEach(el => {
+          el.classList.toggle('selected', el.style.background === color);
+        });
+      },
+
+      getSubjectIcon(name) {
+        const icons = {
+          'Math': '🔢', 'English': '🔤', 'Chinese': '📝', 'Science': '🔬',
+          'History': '📜', 'Geography': '🌍', 'Physics': '⚡', 'Chemistry': '🧪',
+          'Biology': '🧬', 'Music': '🎵', 'Art': '🎨', 'PE': '⚽'
+        };
+        return icons[name] || '📖';
+      },
+
+      renderSubjects() {
+        const grid = document.getElementById('subjectsGridMain');
+        grid.innerHTML = this.subjects.map(s => {
+          if (this.currentSubject?.id === s.id) {
+            return `
+              <div class="subject-card timer-mode" 
+                   style="background: linear-gradient(135deg, ${s.color} 0%, ${this.lightenColor(s.color)} 100%);">
+                <div class="timer-card-time" id="timerCardTime">00:00</div>
+                <div class="timer-card-controls">
+                  <button class="timer-card-btn play" id="timerCardPlayBtn" onclick="app.toggleTimer()">▶</button>
+                  <button class="timer-card-btn stop" onclick="app.stopAndSave()">✓</button>
+                </div>
+              </div>`;
+          }
+          return `
+            <div class="subject-card" 
+                 onclick="app.selectSubject('${s.id}')"
+                 oncontextmenu="app.handleSubjectLongPress('${s.id}', event)"
+                 style="background: linear-gradient(135deg, ${s.color} 0%, ${this.lightenColor(s.color)} 100%);">
+              <span class="subject-card-icon">${this.getSubjectIcon(s.name)}</span>
+              <span class="subject-card-name">${s.name}</span>
+            </div>`;
+        }).join('') + `
+          <div class="subject-card subject-card-add" onclick="app.openModal()">
+            <span class="subject-card-icon">+</span>
+            <span class="subject-card-name">Add</span>
+          </div>
+        `;
+      },
+
+      lightenColor(color) {
+        return color + '99';
+      },
+
+      selectSubject(id) {
+        this.currentSubject = this.subjects.find(s => s.id === id);
+        this.seconds = 0;
+        this.renderSubjects();
+        triggerHaptic?.('light');
+      },
+
+      goBack() {
+        this.pauseTimer();
+        this.currentSubject = null;
+        this.seconds = 0;
+        this.renderSubjects();
+      },
+
+      handleSubjectLongPress(id, e) {
+        e.preventDefault();
+        if (confirm('Delete this subject?')) {
+          this.subjects = this.subjects.filter(s => s.id !== id);
+          this.saveData();
+          this.renderSubjects();
+          triggerHaptic?.('success');
+        }
+      },
+
+      openModal() {
+        document.getElementById('addSubjectModal').classList.add('active');
+        document.getElementById('newSubjectName').value = '';
+        this.selectedColor = COLORS[0];
+        this.initColorOptions();
+      },
+
+      closeModal() {
+        document.getElementById('addSubjectModal').classList.remove('active');
+      },
+
+      saveSubject() {
+        const name = document.getElementById('newSubjectName').value.trim();
+        if (!name) return;
+        
+        this.subjects.push({
+          id: Date.now().toString(),
+          name,
+          color: this.selectedColor
+        });
+        this.saveData();
+        this.renderSubjects();
+        this.closeModal();
+        triggerHaptic?.('success');
+      },
+
+      handleQuickAdd(e) {
+        if (e.key === 'Enter') {
+          const name = e.target.value.trim();
+          if (!name) return;
+          
+          this.subjects.push({
+            id: Date.now().toString(),
+            name,
+            color: COLORS[Math.floor(Math.random() * COLORS.length)]
+          });
+          this.saveData();
+          this.renderSubjects();
+          e.target.value = '';
+          triggerHaptic?.('success');
+        }
+      },
+
+      toggleTimer() {
+        if (!this.currentSubject) {
+          alert('Please select a subject first');
+          return;
+        }
+        
+        if (this.isRunning) {
+          this.pauseTimer();
+        } else {
+          this.startTimer();
+        }
+      },
+
+      startTimer() {
+        this.isRunning = true;
+        const playBtn = document.getElementById('timerCardPlayBtn');
+        if (playBtn) {
+          playBtn.textContent = '⏸';
+          playBtn.classList.remove('play');
+          playBtn.classList.add('pause');
+        }
+        const timeEl = document.getElementById('timerCardTime');
+        if (timeEl) timeEl.classList.add('running');
+        
+        this.timerInterval = setInterval(() => {
+          this.seconds++;
+          this.updateTimerCardDisplay();
+        }, 1000);
+        triggerHaptic?.('light');
+      },
+
+      pauseTimer() {
+        this.isRunning = false;
+        const playBtn = document.getElementById('timerCardPlayBtn');
+        if (playBtn) {
+          playBtn.textContent = '▶';
+          playBtn.classList.remove('pause');
+          playBtn.classList.add('play');
+        }
+        const timeEl = document.getElementById('timerCardTime');
+        if (timeEl) timeEl.classList.remove('running');
+        clearInterval(this.timerInterval);
+        triggerHaptic?.('light');
+      },
+
+      resetTimer() {
+        this.pauseTimer();
+        this.seconds = 0;
+        this.updateTimerCardDisplay();
+      },
+
+      updateTimerCardDisplay() {
+        const el = document.getElementById('timerCardTime');
+        if (el) el.textContent = this.formatTime(this.seconds);
+      },
+
+      stopAndSave() {
+        if (!this.currentSubject || this.seconds === 0) {
+          this.goBack();
+          return;
+        }
+
+        const savedDuration = this.seconds;
+        
+        this.records.push({
+          id: Date.now().toString(),
+          subjectId: this.currentSubject.id,
+          subjectName: this.currentSubject.name,
+          color: this.currentSubject.color,
+          duration: savedDuration,
+          date: new Date().toISOString().split('T')[0],
+          timestamp: Date.now()
+        });
+
+        this.saveData();
+        this.seconds = 0;
+        this.updateTimerCardDisplay();
+        this.renderStats();
+        triggerHaptic?.('success');
+        
+        alert(`Saved: ${this.currentSubject.name} ${this.formatTime(savedDuration)}`);
+        this.goBack();
+      },
+
+      formatTime(secs) {
+        const m = Math.floor(secs / 60).toString().padStart(2, '0');
+        const s = (secs % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+      },
+
+      switchView(view) {
+        document.getElementById('mainView').style.display = view === 'main' ? 'block' : 'none';
+        document.getElementById('statsView').style.display = view === 'stats' ? 'block' : 'none';
+        document.querySelectorAll('.nav-item').forEach((el, i) => {
+          el.classList.toggle('active', (view === 'main' && i === 0) || (view === 'stats' && i === 1));
+        });
+      },
+
+      switchTab(period) {
+        document.querySelectorAll('.tab-btn').forEach(el => {
+          el.classList.toggle('active', el.textContent.toLowerCase().includes(period));
+        });
+        this.renderStats(period);
+      },
+
+      renderStats(period = 'week') {
+        if (period === 'week') {
+          this.renderWeekStats();
+        } else {
+          this.renderMonthStats();
+        }
+      },
+
+      renderWeekStats() {
+        const content = document.getElementById('statsContent');
+        const today = new Date();
+        const chartData = [];
+        
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(today);
+          d.setDate(d.getDate() - i);
+          const dateStr = d.toISOString().split('T')[0];
+          const dayName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
+          chartData.push({ date: dateStr, label: dayName, total: 0 });
+        }
+
+        const startDate = chartData[0].date;
+        const filtered = this.records.filter(r => r.date >= startDate);
+
+        if (filtered.length === 0) {
+          content.innerHTML = this.getEmptyStateHTML();
+          return;
+        }
+
+        filtered.forEach(r => {
+          const item = chartData.find(d => d.date === r.date);
+          if (item) item.total += r.duration;
+        });
+
+        const chartHTML = this.renderTimeChart(chartData, 'This Week');
+        const bySubject = this.getSubjectStats(filtered);
+        content.innerHTML = chartHTML + this.renderSubjectChart(bySubject);
+      },
+
+      renderMonthStats() {
+        const content = document.getElementById('statsContent');
+        const today = new Date();
+        const chartData = [];
+        const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+        
+        for (let i = 1; i <= daysInMonth; i++) {
+          const d = new Date(today.getFullYear(), today.getMonth(), i);
+          const dateStr = d.toISOString().split('T')[0];
+          chartData.push({ date: dateStr, label: i, total: 0 });
+        }
+
+        const startDate = chartData[0].date;
+        const filtered = this.records.filter(r => r.date >= startDate);
+
+        if (filtered.length === 0) {
+          content.innerHTML = this.getEmptyStateHTML();
+          return;
+        }
+
+        filtered.forEach(r => {
+          const item = chartData.find(d => d.date === r.date);
+          if (item) item.total += r.duration;
+        });
+
+        const chartHTML = this.renderTimeChart(chartData, 'This Month');
+        const bySubject = this.getSubjectStats(filtered);
+        content.innerHTML = chartHTML + this.renderSubjectChart(bySubject);
+      },
+
+      renderTimeChart(chartData, title) {
+        const maxDuration = Math.max(...chartData.map(d => d.total), 1);
+        const isWeek = chartData.length <= 7;
+        const chartClass = isWeek ? 'week' : 'month';
+        
+        let html = '<div class="chart-container">';
+        html += `<div class="chart-title">${title}</div>`;
+        html += `<div class="bar-chart ${chartClass}">`;
+        
+        chartData.forEach(data => {
+          const height = data.total > 0 ? Math.max((data.total / maxDuration) * 100, 10) : 5;
+          const bg = data.total > 0 ? 'var(--primary)' : '#e1e2e6';
+          const mins = Math.floor(data.total / 60);
+          
+          html += `
+            <div class="bar-item">
+              <span class="bar-value">${mins > 0 ? mins + 'm' : ''}</span>
+              <div class="bar" style="height: ${height}%; background: ${bg};"></div>
+              <span class="bar-label">${data.label}</span>
+            </div>
+          `;
+        });
+        
+        return html + '</div></div>';
+      },
+
+      getSubjectStats(records) {
+        const bySubject = {};
+        records.forEach(r => {
+          if (!bySubject[r.subjectName]) {
+            bySubject[r.subjectName] = { color: r.color, duration: 0 };
+          }
+          bySubject[r.subjectName].duration += r.duration;
+        });
+        return bySubject;
+      },
+
+      renderSubjectChart(bySubject) {
+        const total = Object.values(bySubject).reduce((sum, s) => sum + s.duration, 0);
+        
+        return `
+          <div class="chart-container">
+            <div class="chart-title">By Subject</div>
+            <div class="subject-chart">
+              ${Object.entries(bySubject).map(([name, data]) => {
+                const pct = total > 0 ? Math.round((data.duration / total) * 100) : 0;
+                return `
+                  <div class="subject-bar-row">
+                    <span class="subject-bar-label">${name}</span>
+                    <div class="subject-bar-container">
+                      <div class="subject-bar-fill" style="width: ${pct}%; background: ${data.color};"></div>
+                    </div>
+                    <span class="subject-bar-value">${pct}%</span>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+          <div class="total-row">
+            <span class="total-label">Total</span>
+            <span class="total-duration">${this.formatDuration(total)}</span>
+          </div>
+        `;
+      },
+
+      getEmptyStateHTML() {
+        return `
+          <div class="empty-state">
+            <span>📚</span>
+            <p>No study records</p>
+            <p style="font-size:12px;margin-top:8px">Start timing!</p>
+          </div>`;
+      },
+
+      formatDuration(secs) {
+        const h = Math.floor(secs / 3600);
+        const m = Math.floor((secs % 3600) / 60);
+        if (h > 0) return `${h}h ${m}m`;
+        return `${m} min`;
+      }
+    };
+
+    window.onload = () => app.init();
+
+    const triggerHaptic = (type) => {
+      if (window.Capacitor?.isNativePlatform?.()) {
+        window.Capacitor.Haptics?.impact?.({ style: type });
+      }
+    };
+  </script>
+</body>
+</html>
