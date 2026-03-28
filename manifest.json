@@ -1,25 +1,17 @@
 {
-  "name": "POMO Study Timer",
-  "short_name": "POMO",
-  "description": "Track study time by subject",
+  "name": "PomoTodo",
+  "short_name": "PomoTodo",
+  "description": "Study timer and task manager",
   "start_url": "./index.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#2d3436",
   "theme_color": "#2d3436",
-  "scope": "./",
   "icons": [
     {
       "src": "icon.svg",
       "sizes": "192x192",
-      "type": "image/svg+xml",
-      "purpose": "any"
-    },
-    {
-      "src": "icon.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any"
+      "type": "image/svg+xml"
     }
   ]
 }

@@ -1,6 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
   <rect width="192" height="192" fill="#2d3436" rx="40"/>
-  <circle cx="96" cy="96" r="60" fill="white" opacity="0.2"/>
-  <text x="96" y="120" font-size="70" text-anchor="middle" fill="white">⏱️</text>
-  <text x="96" y="155" font-size="24" text-anchor="middle" fill="white" font-weight="bold">Pomo</text>
+  <text x="96" y="80" font-size="40" text-anchor="middle" fill="white">📚</text>
+  <text x="96" y="120" font-size="24" text-anchor="middle" fill="white">PomoTodo</text>
+  <circle cx="96" cy="145" r="20" fill="#00b894"/>
+  <text x="96" y="152" font-size="20" text-anchor="middle" fill="white">✓</text>
 </svg>
