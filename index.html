@@ -654,8 +654,10 @@
       },
 
       startTimer(taskId) {
-        activeTimerTaskId = taskId;
-        timerSeconds = this.tasks.find(t => t.id === taskId)?.workTime || 0;
+        if (activeTimerTaskId !== taskId) {
+          activeTimerTaskId = taskId;
+          timerSeconds = this.tasks.find(t => t.id === taskId)?.workTime || 0;
+        }
         
         if (timerInterval) clearInterval(timerInterval);
         
