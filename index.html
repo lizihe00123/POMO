@@ -490,6 +490,7 @@
     let activeTimerTaskId = null;
     let timerInterval = null;
     let timerSeconds = 0;
+    let isTimerPaused = false;
 
     const app = {
       tasks: [],
@@ -604,7 +605,8 @@
       },
 
       renderTaskItem(task) {
-        const isTimerRunning = activeTimerTaskId === task.id;
+        const isTimerRunning = activeTimerTaskId === task.id && !isTimerPaused;
+        const hasActiveTimer = activeTimerTaskId === task.id;
         const countdown = this.getCountdown(task);
         
         return `
@@ -618,11 +620,14 @@
             </div>
             <div class="task-timer-display" onclick="event.stopPropagation()">
               <span class="timer-display ${isTimerRunning ? 'running' : ''}" id="timer-${task.id}">
-                ${task.workTime ? this.formatTime(task.workTime) : '00:00'}
+                ${hasActiveTimer ? this.formatTime(timerSeconds) : (task.workTime ? this.formatTime(task.workTime) : '00:00')}
               </span>
-              ${isTimerRunning 
-                ? `<button class="timer-btn pause" onclick="app.pauseTimer()">⏸</button>
-                   <button class="timer-btn stop" onclick="app.stopTimer()">✓</button>`
+              ${hasActiveTimer 
+                ? (isTimerPaused 
+                    ? `<button class="timer-btn play" onclick="app.startTimer('${task.id}')">▶</button>
+                       <button class="timer-btn stop" onclick="app.stopTimer()">✓</button>`
+                    : `<button class="timer-btn pause" onclick="app.pauseTimer()">⏸</button>
+                       <button class="timer-btn stop" onclick="app.stopTimer()">✓</button>`)
                 : `<button class="timer-btn play" onclick="app.startTimer('${task.id}')">▶</button>`
               }
             </div>
@@ -658,6 +663,7 @@
           activeTimerTaskId = taskId;
           timerSeconds = this.tasks.find(t => t.id === taskId)?.workTime || 0;
         }
+        isTimerPaused = false;
         
         if (timerInterval) clearInterval(timerInterval);
         
@@ -671,6 +677,14 @@
       },
 
       pauseTimer() {
+        if (activeTimerTaskId) {
+          const task = this.tasks.find(t => t.id === activeTimerTaskId);
+          if (task) {
+            task.workTime = timerSeconds;
+            this.saveTasks();
+          }
+        }
+        isTimerPaused = true;
         if (timerInterval) {
           clearInterval(timerInterval);
           timerInterval = null;
@@ -688,6 +702,7 @@
         }
         activeTimerTaskId = null;
         timerSeconds = 0;
+        isTimerPaused = false;
         if (timerInterval) {
           clearInterval(timerInterval);
           timerInterval = null;
